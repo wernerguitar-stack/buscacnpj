@@ -162,13 +162,20 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 if erro_bitrix:
                     st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
                 else:
-                    st.balloons()
+                 st.balloons()
                     st.success(f"🎉 **Negócio criado com sucesso!**")
                     
-                    # GERANDO O LINK DIRETO PARA O BITRIX24
-                    url_negocio = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+                    # URLs de Destino
+                    url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+                    url_mobile = f"bx://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
                     
-                    # Exibe um botão bonito e destacado para abrir o negócio direto no Bitrix
-                    st.link_button("👉 Abrir Negócio Criado no Bitrix24", url_negocio, type="secondary")
+                    # Layout com duas colunas para os botões de acesso
+                    col1, col2 = st.columns(2)
                     
-                    st.info(f"ID do Card no Bitrix24: **{deal_id}** (Todos os campos personalizados foram preenchidos no CRM!)")
+                    with col1:
+                        st.link_button("💻 Abrir no Computador", url_desktop, use_container_width=True)
+                    
+                    with col2:
+                        st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
+                    
+                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")
