@@ -162,7 +162,10 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 if erro_bitrix:
                     st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
                 else:
-                 st.balloons()
+                 if erro_bitrix:
+                    st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
+                else:
+                    st.balloons()
                     st.success(f"🎉 **Negócio criado com sucesso!**")
                     
                     # URLs de Destino
