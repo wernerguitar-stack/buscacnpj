@@ -18,7 +18,9 @@ CAMPOS_BITRIX = {
     "ENDERECO": "UF_CRM_1784162676181",
     "CIDADE_UF": "UF_CRM_1784162700708",
     "CEP": "UF_CRM_1784162711532",
-    "ATIVIDADE_PRINCIPAL": "UF_CRM_1784162732284"
+    "ATIVIDADE_PRINCIPAL": "UF_CRM_1784162732284",
+    "SOCIO_PROPRIETARIO": "UF_CRM_1784210440412",  # Novo campo mapeado
+    "SITUACAO_CADASTRAL": "UF_CRM_1784210464921"   # Novo campo mapeado
 }
 
 def limpar_cnpj(cnpj_raw):
@@ -53,6 +55,12 @@ def criar_negocio_bitrix(dados_empresa):
     telefone = dados_empresa.get('telefone', '')
     email = dados_empresa.get('email', '')
     
+    # Extração das Novas Variáveis
+    situacao_cadastral = dados_empresa.get('situacao', 'Não informada')
+    
+    qsa = dados_empresa.get('qsa', [])
+    socio_proprietario = qsa[0].get('nome', 'Não informado') if qsa else 'Não informado'
+    
     # Endereço completo formatado
     logradouro = dados_empresa.get('logradouro', '')
     numero = dados_empresa.get('numero', '')
@@ -70,11 +78,13 @@ def criar_negocio_bitrix(dados_empresa):
     atividades = dados_empresa.get('atividade_principal', [])
     atividade_principal = atividades[0].get('text', 'Não informada') if atividades else 'Não informada'
     
-    # Construção do histórico para os comentários gerais (opcional, como backup visual no card)
+    # Construção do histórico para os comentários gerais
     comentarios = (
         f"<b>Razão Social:</b> {razao_social}<br>"
         f"<b>Nome Fantasia:</b> {nome_fantasia}<br>"
         f"<b>CNPJ:</b> {cnpj_formatado}<br>"
+        f"<b>Sócio Proprietário:</b> {socio_proprietario}<br>"
+        f"<b>Situação Cadastral:</b> {situacao_cadastral}<br>"
         f"<b>Telefone:</b> {telefone}<br>"
         f"<b>E-mail:</b> {email}<br>"
         f"<b>Endereço:</b> {endereco_completo}<br>"
@@ -99,7 +109,9 @@ def criar_negocio_bitrix(dados_empresa):
             CAMPOS_BITRIX["ENDERECO"]: endereco_completo,
             CAMPOS_BITRIX["CIDADE_UF"]: cidade_uf,
             CAMPOS_BITRIX["CEP"]: cep,
-            CAMPOS_BITRIX["ATIVIDADE_PRINCIPAL"]: atividade_principal
+            CAMPOS_BITRIX["ATIVIDADE_PRINCIPAL"]: atividade_principal,
+            CAMPOS_BITRIX["SOCIO_PROPRIETARIO"]: socio_proprietario,  # Novo campo enviado ao CRM
+            CAMPOS_BITRIX["SITUACAO_CADASTRAL"]: situacao_cadastral   # Novo campo enviado ao CRM
         },
         "params": {
             "REGISTER_SONET_EVENT": "Y" # Dispara notificação no feed do Bitrix para a equipe
@@ -120,8 +132,21 @@ def criar_negocio_bitrix(dados_empresa):
 # ==========================================
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
 
-st.title("💼 Gerador Automático de Negócios")
-st.subheader("Crie novos leads no Bitrix24")
+# Cabeçalho Personalizado com Logo e Título
+col_logo, col_titulo = st.columns([1, 5])
+
+with col_logo:
+    # Insira abaixo a URL pública do logotipo da sua empresa
+    st.image(
+        "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/assets/logo.png", 
+        width=100
+    )
+
+with col_titulo:
+    st.title("💼 Gerador Automático de Negócios")
+    st.subheader("Crie novos leads no Bitrix24")
+    st.caption("Conectado à organização ws4tech")
+
 st.write("---")
 
 # Campo de entrada
@@ -144,12 +169,19 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
             else:
                 st.success("Dados cadastrais localizados!")
                 
+                # Obtendo dados para a visualização na tela
+                situacao_cadastral_view = dados.get('situacao', 'Não informada')
+                qsa_view = dados.get('qsa', [])
+                socio_proprietario_view = qsa_view[0].get('nome', 'Não informado') if qsa_view else 'Não informado'
+                
                 # Exibe um resumo visual dos dados coletados antes de enviar
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write(f"**Razão Social:** {dados.get('nome')}")
                     st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
+                    st.write(f"**Sócio Proprietário:** {socio_proprietario_view}")
                 with col2:
+                    st.write(f"**Situação Cadastral:** {situacao_cadastral_view}")
                     st.write(f"**Telefone:** {dados.get('telefone')}")
                     st.write(f"**E-mail:** {dados.get('email')}")
                 
@@ -178,4 +210,4 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                     with col2:
                         st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
                     
-                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")     
+                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")
