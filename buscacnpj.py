@@ -159,7 +159,7 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
                     deal_id, erro_bitrix = criar_negocio_bitrix(dados)
                     
-              if erro_bitrix:
+            if erro_bitrix:
                     st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
                 else:
                     st.balloons()
@@ -178,4 +178,4 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                     with col2:
                         st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
                     
-                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")
+                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")                
