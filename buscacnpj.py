@@ -131,17 +131,27 @@ def criar_negocio_bitrix(dados_empresa):
 # INTERFACE DO STREAMLIT
 # ==========================================
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
-# Ocultar elementos de marca do Streamlit, GitHub e "Manage app"
+# Ocultar elementos de marca do Streamlit, GitHub, "Manage app" e botões flutuantes
 st.markdown("""
     <style>
+    /* Esconde o menu clássico e o cabeçalho superior */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .viewerBadge_container__106mG {display: none !important;}
-    .viewerBadge_link__1S137 {display: none !important;}
-    /* Garante que qualquer outro selo do Streamlit de rodapé suma */
+    
+    /* Remove o botão flutuante "Manage app" e as marcas de deploy no canto inferior */
+    .viewerBadge_container__106mG, .viewerBadge_link__1S137 {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
+    
+    /* Remove os botões de controle de deploy e status no canto inferior direito */
+    [data-testid="stStatusWidget"] {visibility: hidden; height: 0px; display: none !important;}
+    .stAppDeployButton {display: none !important;}
+    
+    /* Script de segurança adicional para ocultar elementos do Community Cloud */
+    iframe[title="manage-app"] {display: none !important;}
+    div[class^="viewerBadge"] {display: none !important;}
+    div[class^="styles_viewerBadge"] {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
