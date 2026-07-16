@@ -138,7 +138,7 @@ col_logo, col_titulo = st.columns([1, 5])
 with col_logo:
     # Insira abaixo a URL pública do logotipo da sua empresa
     st.image(
-        "https://github.com/wernerguitar-stack/buscacnpj/blob/main/4technew.png", 
+        "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/4technew.png", 
         width=100
     )
 
