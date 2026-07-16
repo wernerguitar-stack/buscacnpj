@@ -131,6 +131,19 @@ def criar_negocio_bitrix(dados_empresa):
 # INTERFACE DO STREAMLIT
 # ==========================================
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
+# Ocultar elementos de marca do Streamlit, GitHub e "Manage app"
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .viewerBadge_container__106mG {display: none !important;}
+    .viewerBadge_link__1S137 {display: none !important;}
+    /* Garante que qualquer outro selo do Streamlit de rodapé suma */
+    [data-testid="stHeader"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
 
 # Cria 3 colunas para centralizar a logo (a do meio recebe a imagem)
 col_esq, col_centro, col_dir = st.columns([1, 2, 1])
