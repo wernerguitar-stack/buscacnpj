@@ -167,7 +167,7 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                     
                     # URLs de Destino
                     url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
-                    url_mobile = f"bx://ws4tech.bitrix24.com.br/crm/deal/show/{deal_id}/"
+                    url_mobile = f"https://ws4tech.bitrix24.com.br/mobile/index.php?mobile_action=deal&deal_id={deal_id}"
                     
                     # Layout com duas colunas para os botões de acesso
                     col1, col2 = st.columns(2)
