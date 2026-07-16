@@ -130,7 +130,7 @@ def criar_negocio_bitrix(dados_empresa):
 # ==========================================
 # INTERFACE DO STREAMLIT
 # ==========================================
-st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
+
 
 # Cabeçalho Personalizado com Logo e Título
 col_logo, col_titulo = st.columns([1, 5])
