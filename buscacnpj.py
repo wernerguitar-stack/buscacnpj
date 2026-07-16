@@ -164,4 +164,11 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 else:
                     st.balloons()
                     st.success(f"🎉 **Negócio criado com sucesso!**")
+                    
+                    # GERANDO O LINK DIRETO PARA O BITRIX24
+                    url_negocio = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+                    
+                    # Exibe um botão bonito e destacado para abrir o negócio direto no Bitrix
+                    st.link_button("👉 Abrir Negócio Criado no Bitrix24", url_negocio, type="secondary")
+                    
                     st.info(f"ID do Card no Bitrix24: **{deal_id}** (Todos os campos personalizados foram preenchidos no CRM!)")
