@@ -159,10 +159,7 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
                     deal_id, erro_bitrix = criar_negocio_bitrix(dados)
                     
-                if erro_bitrix:
-                    st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
-                else:
-                if erro_bitrix:
+              if erro_bitrix:
                     st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
                 else:
                     st.balloons()
