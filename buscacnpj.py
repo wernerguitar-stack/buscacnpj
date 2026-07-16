@@ -143,7 +143,6 @@ with col_logo:
     )
 
 with col_titulo:
-    st.title("💼 Gerador Automático de Negócios")
     st.subheader("Crie novos leads no Bitrix24")
     st.caption("Conectado à organização ws4tech")
 
