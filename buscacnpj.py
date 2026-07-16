@@ -159,15 +159,15 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                 with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
                     deal_id, erro_bitrix = criar_negocio_bitrix(dados)
                     
-            if erro_bitrix:
+                if erro_bitrix:
                     st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
-            else:
+                else:
                     st.balloons()
                     st.success(f"🎉 **Negócio criado com sucesso!**")
                     
                     # URLs de Destino
                     url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
-                    url_mobile = f"bx://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+                    url_mobile = f"bx://ws4tech.bitrix24.com.br/crm/deal/show/{deal_id}/"
                     
                     # Layout com duas colunas para os botões de acesso
                     col1, col2 = st.columns(2)
@@ -178,4 +178,4 @@ if st.button("Buscar CNPJ e Cadastrar", type="primary"):
                     with col2:
                         st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
                     
-                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")                
+                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")     
