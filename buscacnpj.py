@@ -121,7 +121,7 @@ def criar_negocio_bitrix(dados_empresa):
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
 
 st.title("💼 Gerador Automático de Negócios")
-st.subheader("Crie novos leads no Bitrix24 consultando dados na ReceitaWS")
+st.subheader("Crie novos leads no Bitrix24")
 st.write("---")
 
 # Campo de entrada
