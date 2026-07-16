@@ -130,24 +130,23 @@ def criar_negocio_bitrix(dados_empresa):
 # ==========================================
 # INTERFACE DO STREAMLIT
 # ==========================================
+st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
 
+# Cria 3 colunas para centralizar a logo (a do meio recebe a imagem)
+col_esq, col_centro, col_dir = st.columns([1, 2, 1])
 
-# Cabeçalho Personalizado com Logo e Título
-col_logo, col_titulo = st.columns([1, 5])
-
-with col_logo:
-    # Insira abaixo a URL pública do logotipo da sua empresa
+with col_centro:
+    # Logo centralizada e maior (tamanho de 250px)
     st.image(
         "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/4technew.png", 
-        width=100
+        use_container_width=True
     )
 
-with col_titulo:
-    st.subheader("Crie novos leads no Bitrix24")
-    st.caption("Conectado à organização ws4tech")
+# Subtítulo e legenda centralizados abaixo da logo
+st.markdown("<h3 style='text-align: center; margin-top: -10px;'>Crie novos leads no Bitrix24</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Conectado à organização ws4tech</p>", unsafe_allow_html=True)
 
 st.write("---")
-
 # Campo de entrada
 cnpj_input = st.text_input("Digite o CNPJ da empresa (com ou sem pontuação):", placeholder="00.000.000/0000-00")
 
