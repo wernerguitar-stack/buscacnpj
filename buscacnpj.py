@@ -45,40 +45,33 @@ def consultar_cnpj(cnpj):
 
 def criar_negocio_bitrix(dados_empresa):
     """Cria um novo negócio (Deal) no Bitrix24 com os dados coletados nos campos personalizados correspondentes."""
-    # Endpoint para adicionar um negócio (Deal)
     url = f"{BITRIX_WEBHOOK_URL}crm.deal.add.json"
     
-    # Extraindo dados e formatando conforme necessário
     razao_social = dados_empresa.get('nome', '')
     nome_fantasia = dados_empresa.get('fantasia', '') or 'Não informado'
     cnpj_formatado = dados_empresa.get('cnpj', '')
-    telefone = dados_empresa.get('telefone', '')
-    email = dados_empresa.get('email', '')
     
-    # Extração das Novas Variáveis
+    # Pega os valores ajustados pelo usuário nos campos editáveis
+    telefone = dados_empresa.get('telefone_editado', '')
+    email = dados_empresa.get('email_editado', '')
+    socio_proprietario = dados_empresa.get('socio_editado', '')
+    
     situacao_cadastral = dados_empresa.get('situacao', 'Não informada')
     
-    qsa = dados_empresa.get('qsa', [])
-    socio_proprietario = qsa[0].get('nome', 'Não informado') if qsa else 'Não informado'
-    
-    # Endereço completo formatado
     logradouro = dados_empresa.get('logradouro', '')
     numero = dados_empresa.get('numero', '')
     bairro = dados_empresa.get('bairro', '')
     endereco_completo = f"{logradouro}, {numero} - {bairro}"
     
-    # Cidade / UF
     cidade = dados_empresa.get('municipio', '')
     uf = dados_empresa.get('uf', '')
     cidade_uf = f"{cidade} / {uf}" if cidade and uf else (cidade or uf)
     
     cep = dados_empresa.get('cep', '')
     
-    # Atividade Principal
     atividades = dados_empresa.get('atividade_principal', [])
     atividade_principal = atividades[0].get('text', 'Não informada') if atividades else 'Não informada'
     
-    # Construção do histórico para os comentários gerais
     comentarios = (
         f"<b>Razão Social:</b> {razao_social}<br>"
         f"<b>Nome Fantasia:</b> {nome_fantasia}<br>"
@@ -96,11 +89,10 @@ def criar_negocio_bitrix(dados_empresa):
     payload = {
         "fields": {
             "TITLE": f"Novo Cliente: {razao_social}",
-            "STAGE_ID": "NEW",  # Envia para a primeira etapa do funil principal
-            "OPENED": "Y",      # Deixa o card aberto e visível para a equipe
-            "COMMENTS": comentarios, # Mantém também nos comentários gerais do card
+            "STAGE_ID": "NEW",
+            "OPENED": "Y",
+            "COMMENTS": comentarios,
             
-            # Mapeamento dinâmico utilizando os seus IDs personalizados:
             CAMPOS_BITRIX["RAZAO_SOCIAL"]: razao_social,
             CAMPOS_BITRIX["NOME_FANTASIA"]: nome_fantasia,
             CAMPOS_BITRIX["CNPJ"]: cnpj_formatado,
@@ -110,11 +102,11 @@ def criar_negocio_bitrix(dados_empresa):
             CAMPOS_BITRIX["CIDADE_UF"]: cidade_uf,
             CAMPOS_BITRIX["CEP"]: cep,
             CAMPOS_BITRIX["ATIVIDADE_PRINCIPAL"]: atividade_principal,
-            CAMPOS_BITRIX["SOCIO_PROPRIETARIO"]: socio_proprietario,  # Novo campo enviado ao CRM
-            CAMPOS_BITRIX["SITUACAO_CADASTRAL"]: situacao_cadastral   # Novo campo enviado ao CRM
+            CAMPOS_BITRIX["SOCIO_PROPRIETARIO"]: socio_proprietario,
+            CAMPOS_BITRIX["SITUACAO_CADASTRAL"]: situacao_cadastral
         },
         "params": {
-            "REGISTER_SONET_EVENT": "Y" # Dispara notificação no feed do Bitrix para a equipe
+            "REGISTER_SONET_EVENT": "Y"
         }
     }
     
@@ -122,7 +114,7 @@ def criar_negocio_bitrix(dados_empresa):
         response = requests.post(url, json=payload, timeout=10)
         res_json = response.json()
         if "result" in res_json:
-            return res_json["result"], None # Retorna o ID do negócio criado
+            return res_json["result"], None
         return None, res_json.get("error_description", "Erro desconhecido ao integrar.")
     except Exception as e:
         return None, f"Falha na comunicação com o Bitrix: {str(e)}"
@@ -132,54 +124,43 @@ def criar_negocio_bitrix(dados_empresa):
 # ==========================================
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
 
-# Ocultar elementos de marca do Streamlit, GitHub, "Manage app" e botões flutuantes
 st.markdown("""
     <style>
-    /* Esconde o menu clássico e o cabeçalho superior */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Remove o botão flutuante "Manage app" e as marcas de deploy no canto inferior */
     .viewerBadge_container__106mG, .viewerBadge_link__1S137 {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
     
-    /* Remove os botões de controle de deploy e status no canto inferior direito */
     [data-testid="stStatusWidget"] {visibility: hidden; height: 0px; display: none !important;}
     .stAppDeployButton {display: none !important;}
     
-    /* Script de segurança adicional para ocultar elementos do Community Cloud */
     iframe[title="manage-app"] {display: none !important;}
     div[class^="viewerBadge"] {display: none !important;}
     div[class^="styles_viewerBadge"] {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
-# Cria 3 colunas para centralizar a logo (a do meio recebe a imagem)
 col_esq, col_centro, col_dir = st.columns([1, 2, 1])
 
 with col_centro:
-    # Logo original da Ws4tech
     st.image(
         "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/4technew.png", 
         use_container_width=True
     )
 
-# Subtítulo e legenda centralizados abaixo da logo
 st.markdown("<h3 style='text-align: center; margin-top: -10px;'>Crie novos leads no Bitrix24</h3>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>Conectado à organização ws4tech</p>", unsafe_allow_html=True)
 
 st.write("---")
 
-# Inicializa o estado de sessão para armazenar os dados buscados
 if "dados_cnpj" not in st.session_state:
     st.session_state.dados_cnpj = None
 
-# Campo de entrada
 cnpj_input = st.text_input("Digite o CNPJ da empresa (com ou sem pontuação):", placeholder="00.000.000/0000-00")
 
-# Botão Etapa 1: Apensar buscar
 if st.button("Buscar CNPJ", type="secondary", use_container_width=True):
     if not cnpj_input:
         st.warning("Por favor, digite um CNPJ para continuar.")
@@ -200,29 +181,38 @@ if st.button("Buscar CNPJ", type="secondary", use_container_width=True):
             else:
                 st.session_state.dados_cnpj = dados
 
-# Exibição do resultado e do botão de cadastro
+# Exibição dos dados com campos EDITÁVEIS
 if st.session_state.dados_cnpj:
     dados = st.session_state.dados_cnpj
-    st.success("Dados cadastrais localizados!")
+    st.success("Dados cadastrais localizados! Edite os campos abaixo caso necessário antes de cadastrar.")
     
-    situacao_cadastral_view = dados.get('situacao', 'Não informada')
     qsa_view = dados.get('qsa', [])
-    socio_proprietario_view = qsa_view[0].get('nome', 'Não informado') if qsa_view else 'Não informado'
+    socio_padrao = qsa_view[0].get('nome', '') if qsa_view else ''
+    telefone_padrao = dados.get('telefone', '')
+    email_padrao = dados.get('email', '')
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write(f"**Razão Social:** {dados.get('nome')}")
-        st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
-        st.write(f"**Sócio Proprietário:** {socio_proprietario_view}")
-    with col2:
-        st.write(f"**Situação Cadastral:** {situacao_cadastral_view}")
-        st.write(f"**Telefone:** {dados.get('telefone')}")
-        st.write(f"**E-mail:** {dados.get('email')}")
+    # Exibe informações gerais fixas
+    st.write(f"**Razão Social:** {dados.get('nome')}")
+    st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
+    st.write(f"**Situação Cadastral:** {dados.get('situacao')}")
+    
+    st.write("---")
+    st.caption("✏️ **Campos de contato editáveis:**")
+    
+    # Caixa de texto editáveis na tela do celular/PC
+    socio_editado = st.text_input("Sócio / Proprietário:", value=socio_padrao)
+    telefone_editado = st.text_input("Telefone de Contato:", value=telefone_padrao)
+    email_editado = st.text_input("E-mail de Contato:", value=email_padrao)
     
     st.write("---")
     
-    # Botão Etapa 2: Confirmar e enviar para o Bitrix24
+    # Botão de confirmação
     if st.button("📌 Cadastrar CNPJ no Bitrix24", type="primary", use_container_width=True):
+        # Injeta os valores editados na variável para envio
+        dados['socio_editado'] = socio_editado
+        dados['telefone_editado'] = telefone_editado
+        dados['email_editado'] = email_editado
+        
         with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
             deal_id, erro_bitrix = criar_negocio_bitrix(dados)
             
@@ -242,4 +232,3 @@ if st.session_state.dados_cnpj:
                 st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
             
             st.info(f"ID do Card no Bitrix24: **{deal_id}**")
-      
