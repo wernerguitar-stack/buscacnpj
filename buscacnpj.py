@@ -131,6 +131,7 @@ def criar_negocio_bitrix(dados_empresa):
 # INTERFACE DO STREAMLIT
 # ==========================================
 st.set_page_config(page_title="Gerador de Negócios - Bitrix24", page_icon="💼", layout="centered")
+
 # Ocultar elementos de marca do Streamlit, GitHub, "Manage app" e botões flutuantes
 st.markdown("""
     <style>
@@ -159,7 +160,7 @@ st.markdown("""
 col_esq, col_centro, col_dir = st.columns([1, 2, 1])
 
 with col_centro:
-    # Logo centralizada e maior (tamanho de 250px)
+    # Logo original da Ws4tech
     st.image(
         "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/4technew.png", 
         use_container_width=True
@@ -170,65 +171,74 @@ st.markdown("<h3 style='text-align: center; margin-top: -10px;'>Crie novos leads
 st.markdown("<p style='text-align: center; color: gray;'>Conectado à organização ws4tech</p>", unsafe_allow_html=True)
 
 st.write("---")
+
+# Inicializa o estado de sessão para armazenar os dados buscados
+if "dados_cnpj" not in st.session_state:
+    st.session_state.dados_cnpj = None
+
 # Campo de entrada
 cnpj_input = st.text_input("Digite o CNPJ da empresa (com ou sem pontuação):", placeholder="00.000.000/0000-00")
 
-if st.button("Buscar CNPJ e Cadastrar", type="primary"):
+# Botão Etapa 1: Apensar buscar
+if st.button("Buscar CNPJ", type="secondary", use_container_width=True):
     if not cnpj_input:
         st.warning("Por favor, digite um CNPJ para continuar.")
+        st.session_state.dados_cnpj = None
     else:
         cnpj_limpo = limpar_cnpj(cnpj_input)
         
         if len(cnpj_limpo) != 14:
             st.error("Um CNPJ válido deve conter exatamente 14 algarismos.")
+            st.session_state.dados_cnpj = None
         else:
             with st.spinner("Buscando dados cadastrais na ReceitaWS..."):
                 dados, erro_api = consultar_cnpj(cnpj_limpo)
                 
             if erro_api:
                 st.error(f"Não foi possível consultar o CNPJ: {erro_api}")
+                st.session_state.dados_cnpj = None
             else:
-                st.success("Dados cadastrais localizados!")
-                
-                # Obtendo dados para a visualização na tela
-                situacao_cadastral_view = dados.get('situacao', 'Não informada')
-                qsa_view = dados.get('qsa', [])
-                socio_proprietario_view = qsa_view[0].get('nome', 'Não informado') if qsa_view else 'Não informado'
-                
-                # Exibe um resumo visual dos dados coletados antes de enviar
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Razão Social:** {dados.get('nome')}")
-                    st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
-                    st.write(f"**Sócio Proprietário:** {socio_proprietario_view}")
-                with col2:
-                    st.write(f"**Situação Cadastral:** {situacao_cadastral_view}")
-                    st.write(f"**Telefone:** {dados.get('telefone')}")
-                    st.write(f"**E-mail:** {dados.get('email')}")
-                
-                st.write("---")
-                
-                # Passo 2: Cadastra no seu Bitrix24 usando seu Webhook e IDs de campo mapeados
-                with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
-                    deal_id, erro_bitrix = criar_negocio_bitrix(dados)
-                    
-                if erro_bitrix:
-                    st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
-                else:
-                    st.balloons()
-                    st.success(f"🎉 **Negócio criado com sucesso!**")
-                    
-                    # URLs de Destino
-                    url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
-                    url_mobile = f"https://ws4tech.bitrix24.com.br/company/personal/user/0/tasks/task/view/0/?PATH_TO_DEAL=https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
-                    
-                    # Layout com duas colunas para os botões de acesso
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.link_button("💻 Abrir no Computador", url_desktop, use_container_width=True)
-                    
-                    with col2:
-                        st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
-                    
-                    st.info(f"ID do Card no Bitrix24: **{deal_id}**")
+                st.session_state.dados_cnpj = dados
+
+# Exibição do resultado e do botão de cadastro
+if st.session_state.dados_cnpj:
+    dados = st.session_state.dados_cnpj
+    st.success("Dados cadastrais localizados!")
+    
+    situacao_cadastral_view = dados.get('situacao', 'Não informada')
+    qsa_view = dados.get('qsa', [])
+    socio_proprietario_view = qsa_view[0].get('nome', 'Não informado') if qsa_view else 'Não informado'
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write(f"**Razão Social:** {dados.get('nome')}")
+        st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
+        st.write(f"**Sócio Proprietário:** {socio_proprietario_view}")
+    with col2:
+        st.write(f"**Situação Cadastral:** {situacao_cadastral_view}")
+        st.write(f"**Telefone:** {dados.get('telefone')}")
+        st.write(f"**E-mail:** {dados.get('email')}")
+    
+    st.write("---")
+    
+    # Botão Etapa 2: Confirmar e enviar para o Bitrix24
+    if st.button("📌 Cadastrar CNPJ no Bitrix24", type="primary", use_container_width=True):
+        with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
+            deal_id, erro_bitrix = criar_negocio_bitrix(dados)
+            
+        if erro_bitrix:
+            st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
+        else:
+            st.balloons()
+            st.success(f"🎉 **Negócio criado com sucesso!**")
+            
+            url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+            url_mobile = f"https://ws4tech.bitrix24.com.br/company/personal/user/0/tasks/task/view/0/?PATH_TO_DEAL=https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
+            
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                st.link_button("💻 Abrir no Computador", url_desktop, use_container_width=True)
+            with col_b2:
+                st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
+            
+            st.info(f"ID do Card no Bitrix24: **{deal_id}**")
