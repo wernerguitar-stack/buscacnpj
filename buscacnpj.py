@@ -242,3 +242,4 @@ if st.session_state.dados_cnpj:
                 st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
             
             st.info(f"ID do Card no Bitrix24: **{deal_id}**")
+      
