@@ -4,11 +4,9 @@ import re
 
 # ==========================================
 # CONFIGURAÇÃO DO BITRIX24
-# Webhook da ws4tech integrado com sucesso!
 # ==========================================
 BITRIX_WEBHOOK_URL = "https://ws4tech.bitrix24.com.br/rest/1/x4wyfxuclu13flj2/"
 
-# Mapeamento dos Campos Personalizados (UF_CRM_) do Bitrix24 fornecidos por você
 CAMPOS_BITRIX = {
     "RAZAO_SOCIAL": "UF_CRM_1784162578702",
     "NOME_FANTASIA": "UF_CRM_1784162602989",
@@ -19,16 +17,15 @@ CAMPOS_BITRIX = {
     "CIDADE_UF": "UF_CRM_1784162700708",
     "CEP": "UF_CRM_1784162711532",
     "ATIVIDADE_PRINCIPAL": "UF_CRM_1784162732284",
-    "SOCIO_PROPRIETARIO": "UF_CRM_1784210440412",  # Novo campo mapeado
-    "SITUACAO_CADASTRAL": "UF_CRM_1784210464921"   # Novo campo mapeado
+    "SOCIO_PROPRIETARIO": "UF_CRM_1784210440412",
+    "SITUACAO_CADASTRAL": "UF_CRM_1784210464921",
+    "ENVIAR_APRESENTACAO": "UF_CRM_1784764305562" 
 }
 
 def limpar_cnpj(cnpj_raw):
-    """Remove qualquer caractere que não seja número do CNPJ."""
     return re.sub(r'\D', '', cnpj_raw)
 
 def consultar_cnpj(cnpj):
-    """Consulta a API pública da ReceitaWS."""
     url = f"https://receitaws.com.br/v1/cnpj/{cnpj}"
     try:
         response = requests.get(url, timeout=10)
@@ -38,24 +35,53 @@ def consultar_cnpj(cnpj):
                 return dados, None
             return None, dados.get("message", "CNPJ não encontrado.")
         elif response.status_code == 429:
-            return None, "Limite de requisições atingido na ReceitaWS (máximo 3 por minuto na versão grátis). Aguarde um instante e tente novamente."
+            return None, "Limite de requisições atingido na ReceitaWS. Aguarde um instante e tente novamente."
         return None, f"Erro na API (Status {response.status_code})"
     except Exception as e:
         return None, f"Erro de conexão: {str(e)}"
 
-def criar_negocio_bitrix(dados_empresa):
-    """Cria um novo negócio (Deal) no Bitrix24 com os dados coletados nos campos personalizados correspondentes."""
+def criar_empresa_bitrix(dados_empresa):
+    """Cria o cadastro da Empresa no CRM do Bitrix24 e retorna o ID da Empresa."""
+    url = f"{BITRIX_WEBHOOK_URL}crm.company.add.json"
+    
+    razao_social = dados_empresa.get('nome', '')
+    nome_fantasia = dados_empresa.get('fantasia', '') or razao_social
+    cnpj_formatado = dados_empresa.get('cnpj', '')
+    telefone = dados_empresa.get('telefone_editado', '')
+    email = dados_empresa.get('email_editado', '')
+    
+    payload = {
+        "fields": {
+            "TITLE": razao_social,
+            "COMPANY_TYPE": "CUSTOMER", # Cliente
+            "PHONE": [{"VALUE": telefone, "VALUE_TYPE": "WORK"}] if telefone else [],
+            "EMAIL": [{"VALUE": email, "VALUE_TYPE": "WORK"}] if email else [],
+            CAMPOS_BITRIX["CNPJ"]: cnpj_formatado,
+            CAMPOS_BITRIX["RAZAO_SOCIAL"]: razao_social,
+            CAMPOS_BITRIX["NOME_FANTASIA"]: nome_fantasia
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        res_json = response.json()
+        if "result" in res_json:
+            return res_json["result"], None
+        return None, res_json.get("error_description", "Erro ao criar Empresa.")
+    except Exception as e:
+        return None, f"Falha ao cadastrar empresa: {str(e)}"
+
+def criar_negocio_bitrix(dados_empresa, enviar_apresentacao, company_id=None):
+    """Cria um novo negócio no Bitrix24 vinculando o ID da Empresa se informado."""
     url = f"{BITRIX_WEBHOOK_URL}crm.deal.add.json"
     
     razao_social = dados_empresa.get('nome', '')
     nome_fantasia = dados_empresa.get('fantasia', '') or 'Não informado'
     cnpj_formatado = dados_empresa.get('cnpj', '')
     
-    # Pega os valores ajustados pelo usuário nos campos editáveis
     telefone = dados_empresa.get('telefone_editado', '')
     email = dados_empresa.get('email_editado', '')
     socio_proprietario = dados_empresa.get('socio_editado', '')
-    
     situacao_cadastral = dados_empresa.get('situacao', 'Não informada')
     
     logradouro = dados_empresa.get('logradouro', '')
@@ -68,9 +94,10 @@ def criar_negocio_bitrix(dados_empresa):
     cidade_uf = f"{cidade} / {uf}" if cidade and uf else (cidade or uf)
     
     cep = dados_empresa.get('cep', '')
-    
     atividades = dados_empresa.get('atividade_principal', [])
     atividade_principal = atividades[0].get('text', 'Não informada') if atividades else 'Não informada'
+    
+    status_apresentacao = "Sim" if enviar_apresentacao else "Não"
     
     comentarios = (
         f"<b>Razão Social:</b> {razao_social}<br>"
@@ -83,28 +110,36 @@ def criar_negocio_bitrix(dados_empresa):
         f"<b>Endereço:</b> {endereco_completo}<br>"
         f"<b>Cidade/UF:</b> {cidade_uf}<br>"
         f"<b>CEP:</b> {cep}<br>"
-        f"<b>Atividade Principal:</b> {atividade_principal}"
+        f"<b>Atividade Principal:</b> {atividade_principal}<br>"
+        f"<b>Enviar Apresentação:</b> {status_apresentacao}"
     )
     
+    fields = {
+        "TITLE": f"Novo Cliente: {razao_social}",
+        "STAGE_ID": "NEW",
+        "OPENED": "Y",
+        "COMMENTS": comentarios,
+        
+        # 🔗 VÍNCULO DIRETO COM A EMPRESA
+        "COMPANY_ID": company_id if company_id else "",
+        
+        # Mapeamento dos campos personalizados
+        CAMPOS_BITRIX["RAZAO_SOCIAL"]: razao_social,
+        CAMPOS_BITRIX["NOME_FANTASIA"]: nome_fantasia,
+        CAMPOS_BITRIX["CNPJ"]: cnpj_formatado,
+        CAMPOS_BITRIX["TELEFONE"]: telefone,
+        CAMPOS_BITRIX["EMAIL"]: email,
+        CAMPOS_BITRIX["ENDERECO"]: endereco_completo,
+        CAMPOS_BITRIX["CIDADE_UF"]: cidade_uf,
+        CAMPOS_BITRIX["CEP"]: cep,
+        CAMPOS_BITRIX["ATIVIDADE_PRINCIPAL"]: atividade_principal,
+        CAMPOS_BITRIX["SOCIO_PROPRIETARIO"]: socio_proprietario,
+        CAMPOS_BITRIX["SITUACAO_CADASTRAL"]: situacao_cadastral,
+        CAMPOS_BITRIX["ENVIAR_APRESENTACAO"]: "Y" if enviar_apresentacao else "N"
+    }
+    
     payload = {
-        "fields": {
-            "TITLE": f"Novo Cliente: {razao_social}",
-            "STAGE_ID": "NEW",
-            "OPENED": "Y",
-            "COMMENTS": comentarios,
-            
-            CAMPOS_BITRIX["RAZAO_SOCIAL"]: razao_social,
-            CAMPOS_BITRIX["NOME_FANTASIA"]: nome_fantasia,
-            CAMPOS_BITRIX["CNPJ"]: cnpj_formatado,
-            CAMPOS_BITRIX["TELEFONE"]: telefone,
-            CAMPOS_BITRIX["EMAIL"]: email,
-            CAMPOS_BITRIX["ENDERECO"]: endereco_completo,
-            CAMPOS_BITRIX["CIDADE_UF"]: cidade_uf,
-            CAMPOS_BITRIX["CEP"]: cep,
-            CAMPOS_BITRIX["ATIVIDADE_PRINCIPAL"]: atividade_principal,
-            CAMPOS_BITRIX["SOCIO_PROPRIETARIO"]: socio_proprietario,
-            CAMPOS_BITRIX["SITUACAO_CADASTRAL"]: situacao_cadastral
-        },
+        "fields": fields,
         "params": {
             "REGISTER_SONET_EVENT": "Y"
         }
@@ -129,22 +164,15 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
     .viewerBadge_container__106mG, .viewerBadge_link__1S137 {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
-    
     [data-testid="stStatusWidget"] {visibility: hidden; height: 0px; display: none !important;}
     .stAppDeployButton {display: none !important;}
-    
-    iframe[title="manage-app"] {display: none !important;}
-    div[class^="viewerBadge"] {display: none !important;}
-    div[class^="styles_viewerBadge"] {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
 col_esq, col_centro, col_dir = st.columns([1, 2, 1])
-
 with col_centro:
     st.image(
         "https://raw.githubusercontent.com/wernerguitar-stack/buscacnpj/main/4technew.png", 
@@ -167,60 +195,59 @@ if st.button("Buscar CNPJ", type="secondary", use_container_width=True):
         st.session_state.dados_cnpj = None
     else:
         cnpj_limpo = limpar_cnpj(cnpj_input)
-        
         if len(cnpj_limpo) != 14:
             st.error("Um CNPJ válido deve conter exatamente 14 algarismos.")
             st.session_state.dados_cnpj = None
         else:
             with st.spinner("Buscando dados cadastrais na ReceitaWS..."):
                 dados, erro_api = consultar_cnpj(cnpj_limpo)
-                
             if erro_api:
                 st.error(f"Não foi possível consultar o CNPJ: {erro_api}")
                 st.session_state.dados_cnpj = None
             else:
                 st.session_state.dados_cnpj = dados
 
-# Exibição dos dados com campos EDITÁVEIS
 if st.session_state.dados_cnpj:
     dados = st.session_state.dados_cnpj
-    st.success("Dados cadastrais localizados! Edite os campos abaixo caso necessário antes de cadastrar.")
+    st.success("Dados cadastrais localizados!")
     
     qsa_view = dados.get('qsa', [])
     socio_padrao = qsa_view[0].get('nome', '') if qsa_view else ''
     telefone_padrao = dados.get('telefone', '')
     email_padrao = dados.get('email', '')
     
-    # Exibe informações gerais fixas
     st.write(f"**Razão Social:** {dados.get('nome')}")
     st.write(f"**Nome Fantasia:** {dados.get('fantasia') or 'Não informado'}")
     st.write(f"**Situação Cadastral:** {dados.get('situacao')}")
     
     st.write("---")
-    st.caption("✏️ **Campos de contato editáveis:**")
+    st.caption("✏️ **Campos de contato:**")
     
-    # Caixa de texto editáveis na tela do celular/PC
     socio_editado = st.text_input("Sócio / Proprietário:", value=socio_padrao)
     telefone_editado = st.text_input("Telefone de Contato:", value=telefone_padrao)
     email_editado = st.text_input("E-mail de Contato:", value=email_padrao)
     
+    enviar_apresentacao = st.checkbox("✉️ Enviar Apresentação Comercial automaticamente para este e-mail", value=True)
+    
     st.write("---")
     
-    # Botão de confirmação
     if st.button("📌 Cadastrar CNPJ no Bitrix24", type="primary", use_container_width=True):
-        # Injeta os valores editados na variável para envio
         dados['socio_editado'] = socio_editado
         dados['telefone_editado'] = telefone_editado
         dados['email_editado'] = email_editado
         
-        with st.spinner("Criando card de negócio no Bitrix24 (ws4tech)..."):
-            deal_id, erro_bitrix = criar_negocio_bitrix(dados)
+        with st.spinner("Cadastrando Empresa e Negócio no Bitrix24..."):
+            # 1. Cria a Empresa no CRM
+            company_id, erro_empresa = criar_empresa_bitrix(dados)
+            
+            # 2. Cria o Negócio já associado à Empresa
+            deal_id, erro_bitrix = criar_negocio_bitrix(dados, enviar_apresentacao, company_id=company_id)
             
         if erro_bitrix:
             st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
         else:
             st.balloons()
-            st.success(f"🎉 **Negócio criado com sucesso!**")
+            st.success("🎉 **Negócio e Empresa criados e vinculados com sucesso!**")
             
             url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
             url_mobile = f"https://ws4tech.bitrix24.com.br/company/personal/user/0/tasks/task/view/0/?PATH_TO_DEAL=https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
@@ -231,4 +258,4 @@ if st.session_state.dados_cnpj:
             with col_b2:
                 st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
             
-            st.info(f"ID do Card no Bitrix24: **{deal_id}**")
+            st.info(f"ID do Card no Bitrix24: **{deal_id}** (Empresa vinculada ID: **{company_id}**)")
