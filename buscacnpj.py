@@ -71,8 +71,35 @@ def criar_empresa_bitrix(dados_empresa):
     except Exception as e:
         return None, f"Falha ao cadastrar empresa: {str(e)}"
 
-def criar_negocio_bitrix(dados_empresa, enviar_apresentacao, company_id=None):
-    """Cria um novo negócio no Bitrix24 vinculando o ID da Empresa se informado."""
+def criar_contato_bitrix(dados_empresa, company_id=None):
+    """Cria o cadastro do Contato no CRM do Bitrix24 e o vincula à Empresa se informado."""
+    url = f"{BITRIX_WEBHOOK_URL}crm.contact.add.json"
+    
+    nome_socio = dados_empresa.get('socio_editado', 'Contato sem nome')
+    telefone = dados_empresa.get('telefone_editado', '')
+    email = dados_empresa.get('email_editado', '')
+    
+    payload = {
+        "fields": {
+            "NAME": nome_socio,
+            "TYPE_ID": "CLIENT",
+            "COMPANY_ID": company_id if company_id else "",
+            "PHONE": [{"VALUE": telefone, "VALUE_TYPE": "WORK"}] if telefone else [],
+            "EMAIL": [{"VALUE": email, "VALUE_TYPE": "WORK"}] if email else []
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        res_json = response.json()
+        if "result" in res_json:
+            return res_json["result"], None
+        return None, res_json.get("error_description", "Erro ao criar Contato.")
+    except Exception as e:
+        return None, f"Falha ao cadastrar contato: {str(e)}"
+
+def criar_negocio_bitrix(dados_empresa, enviar_apresentacao, company_id=None, contact_id=None):
+    """Cria um novo negócio no Bitrix24 vinculando a Empresa e o Contato."""
     url = f"{BITRIX_WEBHOOK_URL}crm.deal.add.json"
     
     razao_social = dados_empresa.get('nome', '')
@@ -120,8 +147,9 @@ def criar_negocio_bitrix(dados_empresa, enviar_apresentacao, company_id=None):
         "OPENED": "Y",
         "COMMENTS": comentarios,
         
-        # 🔗 VÍNCULO DIRETO COM A EMPRESA
+        # 🔗 VÍNCULO COM EMPRESA E CONTATO
         "COMPANY_ID": company_id if company_id else "",
+        "CONTACT_ID": contact_id if contact_id else "",
         
         # Mapeamento dos campos personalizados
         CAMPOS_BITRIX["RAZAO_SOCIAL"]: razao_social,
@@ -236,18 +264,26 @@ if st.session_state.dados_cnpj:
         dados['telefone_editado'] = telefone_editado
         dados['email_editado'] = email_editado
         
-        with st.spinner("Cadastrando Empresa e Negócio no Bitrix24..."):
+        with st.spinner("Cadastrando Empresa, Contato e Negócio no Bitrix24..."):
             # 1. Cria a Empresa no CRM
             company_id, erro_empresa = criar_empresa_bitrix(dados)
             
-            # 2. Cria o Negócio já associado à Empresa
-            deal_id, erro_bitrix = criar_negocio_bitrix(dados, enviar_apresentacao, company_id=company_id)
+            # 2. Cria o Contato no CRM associado à Empresa
+            contact_id, erro_contato = criar_contato_bitrix(dados, company_id=company_id)
+            
+            # 3. Cria o Negócio associado à Empresa e ao Contato
+            deal_id, erro_bitrix = criar_negocio_bitrix(
+                dados, 
+                enviar_apresentacao, 
+                company_id=company_id, 
+                contact_id=contact_id
+            )
             
         if erro_bitrix:
             st.error(f"Erro ao criar registro no Bitrix24: {erro_bitrix}")
         else:
             st.balloons()
-            st.success("🎉 **Negócio e Empresa criados e vinculados com sucesso!**")
+            st.success("🎉 **Negócio, Empresa e Contato criados e vinculados com sucesso!**")
             
             url_desktop = f"https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
             url_mobile = f"https://ws4tech.bitrix24.com.br/company/personal/user/0/tasks/task/view/0/?PATH_TO_DEAL=https://ws4tech.bitrix24.com.br/crm/deal/details/{deal_id}/"
@@ -258,4 +294,4 @@ if st.session_state.dados_cnpj:
             with col_b2:
                 st.link_button("📱 Abrir no App Celular", url_mobile, use_container_width=True)
             
-            st.info(f"ID do Card no Bitrix24: **{deal_id}** (Empresa vinculada ID: **{company_id}**)")
+            st.info(f"IDs criados no Bitrix24 — Negócio: **{deal_id}** | Empresa: **{company_id}** | Contato: **{contact_id}**")
